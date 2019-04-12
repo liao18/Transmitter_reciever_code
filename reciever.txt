@@ -1,0 +1,77 @@
+//author @ Jonathan.Liao
+//version @ 3.15.19
+//RECIEVER CODE
+//Reciever potentiometer data and send signal to servo motor
+
+#include <VirtualWire.h>
+#include <ServoTimer2.h>
+
+const int led_pin = 13;
+const int receive_pin = 12;
+const int servo_pin = 11;
+
+// a buffer to store the incoming messages 
+byte message[VW_MAX_MESSAGE_LEN]; 
+ // the size of the message
+byte messageLength = VW_MAX_MESSAGE_LEN;
+// Value decoded from message
+int decodedVal;
+// Value mapped from Pot to Servo
+int mappedVal;
+
+ServoTimer2 servo1;
+
+void setup()
+{
+    pinMode(led_pin, OUTPUT);
+    
+    // Initialise the IO and ISR
+    vw_set_rx_pin(receive_pin);
+    vw_setup(2000);	 // Bits per sec
+    
+}
+
+
+void loop()
+{
+  readMessage();
+  operateServo();
+}
+
+void readMessage() {
+  vw_rx_start();
+  tryGetMessage(10);
+  vw_rx_stop(); 
+}
+
+void tryGetMessage(int times) {
+  bool gotMessage = false;
+  int i = 0;
+  while(i++ < times && !gotMessage) {
+    if (vw_get_message(message, &messageLength)) { 
+      if (message[2] == 0) {
+        gotMessage = true;
+        // Flash a light to show received good message
+        digitalWrite(led_pin, HIGH); 
+        decode(message,  decodedVal);
+        // Map pot value 0-1023 to Servo
+        mappedVal = map(decodedVal, 0, 1023, MAX_PULSE_WIDTH, MIN_PULSE_WIDTH);
+        digitalWrite(led_pin, LOW);
+      }
+    }
+    delay(10); 
+  }
+}
+
+// Convert the two bytes back to int
+void decode(byte * encoded, int & decoded ) {
+  decoded = (short)(((encoded[1]) & 0xFF) << 8 | (encoded[0]) & 0xFF);
+}
+
+void operateServo() {
+  servo1.attach(servo_pin);
+  servo1.write(mappedVal);
+  delay(20);
+  servo1.detach();
+  delay(20);
+}

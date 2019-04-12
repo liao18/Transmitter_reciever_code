@@ -1,0 +1,57 @@
+//author @ Jonathan.Liao
+//version @ 3.15.19
+//TRANSMITTER CODE
+//send potentiometer data to RC car
+
+#include <VirtualWire.h>
+
+// Digital pin for LED
+const int led_pin = 13;
+// Digital pin for transmitter
+const int transmit_pin = 3; 
+// Analog pin for Pot
+int potPin = 0;
+   
+int potVal = 0;
+byte encodedVal[2];
+
+void setup()
+{
+  Serial.begin(9600); // open the serial port at 9600 bps:
+  // Initialise the transmitter
+  vw_set_tx_pin(transmit_pin);
+  vw_setup(4000);       // Bits per sec
+  // The LED isn't necessary but gives a visual
+  // indication that something is happening
+  pinMode(led_pin, OUTPUT);
+}
+
+void loop()
+{ 
+  // Read the pot
+  potVal = analogRead(potPin);
+  potVal = abs(potVal - 1023);
+  Serial.println(potVal);
+  // Convert int (PotVal) to byte array (encodedVal)
+  encode(potVal, encodedVal);
+  // Flash a light to show transmitting
+  digitalWrite(led_pin, HIGH); 
+  // Send the byte array using the transmitter
+  send(encodedVal);
+  digitalWrite(led_pin, LOW);
+  // Wait a little bit before repeating
+  delay(10);
+}
+
+// Convert int to a 2 byte array
+void encode(int val, byte *encoded ) {
+  encoded[0] = lowByte(val);
+  encoded[1] = highByte(val);
+}
+
+// Send byte array
+void send (byte *message) 
+{ 
+    vw_send(message, sizeof(message)); 
+    vw_wait_tx(); // Wait until the whole message is gone 
+}
